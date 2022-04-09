@@ -28,8 +28,8 @@ def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
 
-def get_users(db: Session, skip: int = 0, limit: int = 100):
-    return db.query(models.User).offset(skip).limit(limit).all()
+def get_users(db: Session):
+    return db.query(models.User).all()
 
 
 class UserCreate(BaseModel):
@@ -37,7 +37,7 @@ class UserCreate(BaseModel):
     email: str
 
 
-def create_user(user: UserCreate, db: Session):
+def create_user(db: Session, user: UserCreate):
     db_user = models.User(email=user.email, username=user.username)
     db.add(db_user)
     db.commit()
@@ -63,20 +63,19 @@ def get_db():
         db.close()
 
 
-@app.get("/users", response_model=List[User])
-async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    users = get_users(db, skip=skip, limit=limit)
-    return users
+@app.get("/users/")
+async def get_users(db: Session = Depends(get_db)):
+    return db.query(models.User).all()
 
 
-@app.post("/users", response_model=User)
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+@app.post("/users/", response_model=User)
+def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db_user = get_user_by_email(db, email=user.email)
     if db_user:
-        raise HTTPException(status_code=400, detail="Email already taken")
+        raise HTTPException(status_code=400, detail="Email already registered")
     return create_user(db=db, user=user)
 
 
-@app.post("/polls", response_model=Poll)
+@app.post("/polls/")
 async def create_poll(poll: Poll):
     return poll
